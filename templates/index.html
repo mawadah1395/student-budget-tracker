@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Student Budget Tracker</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+         background: #eef1f4; color: #1b2430; line-height: 1.5; padding-bottom: 50px; }
+  .bar { background: #0f3c2f; color: #fff; padding: 18px 0; border-bottom: 4px solid #d9a93c; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 18px; }
+  .bar h1 { font-size: 21px; font-weight: 600; }
+  .bar p { font-size: 13px; color: #b9d4c6; margin-top: 2px; }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+           gap: 14px; margin: 20px 0; }
+  .card { background: #fff; border-radius: 9px; padding: 15px 18px;
+          box-shadow: 0 1px 3px rgba(0,0,0,.09); }
+  .card .label { font-size: 11px; letter-spacing: 1px; text-transform: uppercase;
+                 color: #8a8f96; font-weight: 600; }
+  .card .value { font-size: 23px; font-weight: 700; margin-top: 3px; }
+  .green { color: #2f7d45; } .red { color: #c0392b; } .blue { color: #14467a; }
+
+  .track { height: 9px; background: #e3e7eb; border-radius: 5px; overflow: hidden; margin-top: 10px; }
+  .fill { height: 100%; border-radius: 5px; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+  @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+
+  .panel { background: #fff; border-radius: 9px; padding: 18px 20px;
+           box-shadow: 0 1px 3px rgba(0,0,0,.09); margin-bottom: 16px; }
+  .panel h2 { font-size: 15px; color: #0f3c2f; margin-bottom: 12px;
+              padding-bottom: 8px; border-bottom: 2px solid #eef1f4; }
+
+  label { display: block; font-size: 12px; font-weight: 600; color: #5a616a;
+          margin-bottom: 4px; margin-top: 10px; }
+  input, select { width: 100%; padding: 9px 11px; border: 1px solid #ccd3da;
+                  border-radius: 6px; font-size: 14px; font-family: inherit; background: #fff; }
+  input:focus, select:focus { outline: 2px solid #2f7d45; outline-offset: -1px; }
+  button { background: #0f3c2f; color: #fff; border: none; padding: 10px 16px;
+           border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer;
+           font-family: inherit; margin-top: 14px; width: 100%; }
+  button:hover { background: #15543f; }
+  .row { display: flex; gap: 10px; align-items: flex-end; }
+  .row input { margin: 0; } .row button { margin: 0; width: auto; white-space: nowrap; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { text-align: left; font-size: 11px; letter-spacing: .5px; text-transform: uppercase;
+       color: #8a8f96; padding: 7px 8px; border-bottom: 2px solid #eef1f4; }
+  td { padding: 9px 8px; border-bottom: 1px solid #f0f2f5; }
+  td.amt { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .pill { display: inline-block; background: #eef1f4; color: #4a515a; font-size: 11px;
+          padding: 2px 9px; border-radius: 11px; font-weight: 600; }
+  .del { background: none; border: none; color: #c0392b; cursor: pointer; font-size: 16px;
+         padding: 0 5px; margin: 0; width: auto; line-height: 1; }
+  .del:hover { background: none; color: #7d1f12; }
+  .note { color: #8a8f96; font-size: 12.5px; }
+  .empty { text-align: center; color: #8a8f96; padding: 26px 0; font-size: 14px; }
+
+  .chartwrap { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .legend { flex: 1; min-width: 170px; }
+  .legend .item { display: flex; align-items: center; gap: 8px; font-size: 13px;
+                  padding: 4px 0; border-bottom: 1px solid #f4f6f8; }
+  .swatch { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+  .legend .nm { flex: 1; } .legend .vl { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .legend .pc { color: #8a8f96; font-size: 11.5px; width: 42px; text-align: right; }
+</style>
+</head>
+<body>
+
+<div class="bar"><div class="wrap">
+  <h1>Student Budget Tracker</h1>
+  <p>{{ data.count }} expense{{ '' if data.count == 1 else 's' }} recorded</p>
+  <p>Showing {{ data.this_month }} only</p>
+</div></div>
+
+<div class="wrap">
+
+  <!-- ===== SUMMARY CARDS ===== -->
+  <div class="cards">
+    <div class="card">
+      <div class="label">Monthly budget</div>
+      <div class="value blue">{{ money(data.budget) }}</div>
+    </div>
+    <div class="card">
+      <div class="label">Spent</div>
+      <div class="value">{{ money(data.spent) }}</div>
+    </div>
+    <div class="card">
+      <div class="label">Remaining</div>
+      <div class="value {{ 'red' if data.remaining < 0 else 'green' }}">
+        {{ money(data.remaining) }}
+      </div>
+    </div>
+    <div class="card">
+      <div class="label">Budget used</div>
+      <div class="value {{ 'red' if data.percent_used > 100 else '' }}">
+        {{ '%.1f'|format(data.percent_used) }}%
+      </div>
+      <div class="track">
+        {# min(100, ...) stops the bar overflowing its container when you overspend #}
+        <div class="fill"
+             style="width: {{ [data.percent_used, 100]|min }}%;
+                    background: {{ '#c0392b' if data.percent_used > 100 else '#2f7d45' }};"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid">
+
+    <!-- ===== LEFT COLUMN ===== -->
+    <div>
+      <div class="panel">
+        <h2>Add an expense</h2>
+        <form method="POST" action="/add">
+          <label for="amount">Amount (KSh)</label>
+          <input type="number" id="amount" name="amount" step="0.01" min="0"
+                 placeholder="0.00" required autofocus>
+
+          <label for="category">Category</label>
+          <select id="category" name="category">
+            {% for c in categories %}
+              <option value="{{ c }}">{{ c }}</option>
+            {% endfor %}
+          </select>
+
+          <label for="date">Date</label>
+          <input type="date" id="date" name="date" value="{{ today }}">
+
+          <label for="note">Note (optional)</label>
+          <input type="text" id="note" name="note" placeholder="e.g. lunch at the mess"
+                 maxlength="60">
+
+          <button type="submit">Add expense</button>
+        </form>
+      </div>
+
+      <div class="panel">
+        <h2>Set monthly budget</h2>
+        <form method="POST" action="/budget" class="row">
+          <div style="flex:1;">
+            <input type="number" name="budget" step="0.01" min="0"
+                   value="{{ '%.2f'|format(data.budget) }}">
+          </div>
+          <button type="submit">Update</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- ===== RIGHT COLUMN ===== -->
+    <div class="panel">
+      <h2>Where the money goes</h2>
+      <div class="chartwrap">
+        {{ chart_svg|safe }}
+        <div class="legend">
+          {% for item in legend %}
+            <div class="item">
+              <span class="swatch" style="background: {{ item.colour }};"></span>
+              <span class="nm">{{ item.category }}</span>
+              <span class="vl">{{ money(item.amount) }}</span>
+              <span class="pc">{{ '%.0f'|format(item.share) }}%</span>
+            </div>
+          {% else %}
+            <div class="empty">Add an expense to see the breakdown.</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ===== TRANSACTIONS ===== -->
+  <div class="panel">
+    <h2>Recent expenses</h2>
+    {% if data.expenses %}
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th><th>Category</th><th>Note</th>
+            <th style="text-align:right;">Amount</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for e in data.expenses %}
+            <tr>
+              <td class="note">{{ e.date }}</td>
+              <td><span class="pill">{{ e.category }}</span></td>
+              <td class="note">{{ e.note or '—' }}</td>
+              <td class="amt">{{ money(e.amount) }}</td>
+              <td style="text-align:right;">
+                <form method="POST" action="/delete/{{ e.id }}" style="display:inline;">
+                  <button type="submit" class="del" title="Delete">&times;</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <div class="empty">No expenses yet — add your first one on the left.</div>
+    {% endif %}
+  </div>
+
+</div>
+</body>
+</html>
